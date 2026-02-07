@@ -28,6 +28,10 @@ export interface Equipment {
   observations?: string;
   lastSeen?: string;
   source?: 'Manual' | 'UniFi' | 'MikroTik';
+  uptime?: string;
+  cpuUsage?: number;
+  ramUsage?: number;
+  temperature?: number;
 }
 
 export interface IPAMEntry {
@@ -74,6 +78,7 @@ export interface IntegrationSettings {
     site: string;
     enabled: boolean;
     syncInterval: SyncInterval;
+    ignoreSsl: boolean;
   };
   mikrotik: {
     host: string;
@@ -82,5 +87,6 @@ export interface IntegrationSettings {
     port: string;
     enabled: boolean;
     syncInterval: SyncInterval;
+    useSsl: boolean;
   };
 }

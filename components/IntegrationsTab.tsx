@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Network, Link2, Settings, ShieldCheck, Database, Loader2, Info, CheckCircle2, AlertCircle, Eye, EyeOff, Save, Timer, Play } from 'lucide-react';
+import { RefreshCw, Network, Link2, Settings, ShieldCheck, Database, Loader2, Info, CheckCircle2, AlertCircle, Eye, EyeOff, Save, Timer, Play, ShieldAlert, Lock } from 'lucide-react';
 import { Equipment, IPAMEntry, IntegrationSettings, SyncInterval } from '../types';
 import { syncUniFiData, syncMikroTikData, testConnection } from '../utils/networkApi';
 
@@ -18,8 +18,8 @@ const IntegrationsTab: React.FC<Props> = ({ setEquipment, setIpam }) => {
   });
   const [showPass, setShowPass] = useState<Record<string, boolean>>({});
   const [config, setConfig] = useState<IntegrationSettings>({
-    unifi: { url: '', user: '', pass: '', site: 'default', enabled: false, syncInterval: 'manual' },
-    mikrotik: { host: '', user: '', pass: '', port: '8728', enabled: false, syncInterval: 'manual' }
+    unifi: { url: '', user: '', pass: '', site: 'default', enabled: false, syncInterval: 'manual', ignoreSsl: true },
+    mikrotik: { host: '', user: '', pass: '', port: '8728', enabled: false, syncInterval: 'manual', useSsl: false }
   });
 
   useEffect(() => {
@@ -70,7 +70,7 @@ const IntegrationsTab: React.FC<Props> = ({ setEquipment, setIpam }) => {
         return [...manual, ...data.ipam];
       });
 
-      setTestResult(prev => ({ ...prev, [provider]: { success: true, message: 'Dados sincronizados!' } }));
+      setTestResult(prev => ({ ...prev, [provider]: { success: true, message: 'Dados sincronizados com sucesso!' } }));
     } catch (error: any) {
       setTestResult(prev => ({ ...prev, [provider]: { success: false, message: error.message } }));
     } finally {
@@ -95,10 +95,10 @@ const IntegrationsTab: React.FC<Props> = ({ setEquipment, setIpam }) => {
             <Link2 className="text-blue-600" size={32} />
             Network API Integrations
           </h2>
-          <p className="text-slate-500 mt-2">Sincronize inventário e IPAM automaticamente via Controladores e Roteadores.</p>
+          <p className="text-slate-500 mt-2">Sincronize hardware e IPAM via API segura (UniFi Controller & MikroTik RouterOS).</p>
         </div>
         <button onClick={saveConfig} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all">
-          <Save size={18} /> Salvar Preferências
+          <Save size={18} /> Salvar Configurações
         </button>
       </div>
 
@@ -132,12 +132,12 @@ const IntegrationsTab: React.FC<Props> = ({ setEquipment, setIpam }) => {
               </div>
             </div>
             <h3 className="text-xl font-bold text-slate-900">UniFi Controller API</h3>
-            <p className="text-sm text-slate-500 mt-1">Sincroniza UAPs, Switches e USGs em tempo real.</p>
+            <p className="text-sm text-slate-500 mt-1">Coleta UAPs, USWs e métricas via porta 8443/443.</p>
           </div>
           
           <div className="p-8 space-y-4 flex-1">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase">Controller URL</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Controller URL (HTTPS)</label>
               <input 
                 type="text" 
                 value={config.unifi.url}
@@ -146,6 +146,20 @@ const IntegrationsTab: React.FC<Props> = ({ setEquipment, setIpam }) => {
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
               />
             </div>
+            
+            <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+               <div className="flex items-center gap-2">
+                  <ShieldAlert size={16} className={config.unifi.ignoreSsl ? 'text-amber-500' : 'text-green-500'} />
+                  <span className="text-xs font-medium text-slate-600">Ignorar Erros de SSL/Certificado</span>
+               </div>
+               <button 
+                onClick={() => updateConfig('unifi', 'ignoreSsl', !config.unifi.ignoreSsl)}
+                className={`w-8 h-4 rounded-full relative transition-all ${config.unifi.ignoreSsl ? 'bg-amber-500' : 'bg-slate-300'}`}
+               >
+                  <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${config.unifi.ignoreSsl ? 'left-4.5' : 'left-0.5'}`}></div>
+               </button>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase">Usuário</label>
@@ -173,7 +187,7 @@ const IntegrationsTab: React.FC<Props> = ({ setEquipment, setIpam }) => {
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase">Site Name (Slug)</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Site Slug (ex: default)</label>
               <input 
                 type="text" 
                 value={config.unifi.site}
@@ -239,7 +253,7 @@ const IntegrationsTab: React.FC<Props> = ({ setEquipment, setIpam }) => {
               </div>
             </div>
             <h3 className="text-xl font-bold text-slate-900">MikroTik RouterOS API</h3>
-            <p className="text-sm text-slate-500 mt-1">Importa interfaces e DHCP Leases automaticamente.</p>
+            <p className="text-sm text-slate-500 mt-1">Coleta Leases e Métricas via API/API-SSL (8728/8729).</p>
           </div>
           
           <div className="p-8 space-y-4 flex-1">
@@ -264,9 +278,27 @@ const IntegrationsTab: React.FC<Props> = ({ setEquipment, setIpam }) => {
                 />
               </div>
             </div>
+
+            <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+               <div className="flex items-center gap-2">
+                  <Lock size={16} className={config.mikrotik.useSsl ? 'text-indigo-600' : 'text-slate-400'} />
+                  <span className="text-xs font-medium text-slate-600">Usar Conexão Segura (API-SSL)</span>
+               </div>
+               <button 
+                onClick={() => {
+                  const newUseSsl = !config.mikrotik.useSsl;
+                  updateConfig('mikrotik', 'useSsl', newUseSsl);
+                  updateConfig('mikrotik', 'port', newUseSsl ? '8729' : '8728');
+                }}
+                className={`w-8 h-4 rounded-full relative transition-all ${config.mikrotik.useSsl ? 'bg-indigo-600' : 'bg-slate-300'}`}
+               >
+                  <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${config.mikrotik.useSsl ? 'left-4.5' : 'left-0.5'}`}></div>
+               </button>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Usuário</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Usuário API</label>
                 <input 
                   type="text" 
                   value={config.mikrotik.user}
@@ -320,14 +352,14 @@ const IntegrationsTab: React.FC<Props> = ({ setEquipment, setIpam }) => {
         </div>
       </div>
 
-      <div className="mt-12 bg-amber-50 border border-amber-100 rounded-3xl p-6 flex gap-4">
-        <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl shrink-0">
-          <AlertCircle size={24} />
+      <div className="mt-12 bg-indigo-50 border border-indigo-100 rounded-3xl p-6 flex gap-4">
+        <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl shrink-0">
+          <Lock size={24} />
         </div>
         <div>
-          <h4 className="font-bold text-amber-900">Aviso sobre Segurança e CORS</h4>
-          <p className="text-sm text-amber-800/70 mt-1 leading-relaxed">
-            Navegadores bloqueiam requisições diretas a IPs locais (CORS). Para que a integração funcione em ambiente de produção, certifique-se de usar um <strong>CORS Proxy</strong> ou execute o NetManager Pro via Docker na mesma rede dos controladores. Use usuários de apenas leitura (read-only) sempre que possível.
+          <h4 className="font-bold text-indigo-900">Segurança da API e SSL</h4>
+          <p className="text-sm text-indigo-800/70 mt-1 leading-relaxed">
+            Para <strong>MikroTik</strong>, o uso de API-SSL (porta 8729) é altamente recomendado para proteger suas credenciais. Para <strong>UniFi</strong>, certifique-se de que o controlador possua um certificado válido ou utilize a opção "Ignorar SSL" apenas em ambientes de rede controlados. O NetManager Pro não armazena suas credenciais fora do armazenamento local do seu navegador.
           </p>
         </div>
       </div>
